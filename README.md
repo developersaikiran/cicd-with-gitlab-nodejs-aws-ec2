@@ -33,7 +33,7 @@ Define the following variables in GitLab project settings under CI/CD:
 3. Register GitLab Runner:
 
     ```
-    sudo gitlab-runner register --url https://gitlab.com/ --registration-token GR1348941oaTvmrZ3TV8a8Z_m31aK
+    sudo gitlab-runner register --url https://gitlab.com/ --registration-token GR1438941oaTvmrZ3TV8c8Z_m31aK
     ```
     Follow the prompts and add tags with comma separated "runner1,autobot1".
 
