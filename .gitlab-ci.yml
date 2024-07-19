@@ -1,0 +1,62 @@
+variables:
+  BRANCH_NAME: "develop"
+  GITLAB_ACCESS_TOKEN: "glpat-DLo-dSHvuwDrg5TdsKRC"
+
+stages:
+  - deploy
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths: 
+    - node_modules/
+
+deploy-dev-job:
+  stage: deploy
+  script:
+    - |
+      if [ -d "$HOME/.ssh" ]; then 
+        echo ".ssh directory already exists" 
+      else 
+        mkdir -p "$HOME/.ssh"
+      fi
+    - eval `ssh-agent -s`
+    - echo "$AWS_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+    
+    - cat ~/.ssh/id_rsa
+    - chmod 700 ~/.ssh/id_rsa
+    - ssh-add ~/.ssh/id_rsa
+
+    - ssh-keyscan -t rsa $AWS_HOST >> ~/.ssh/known_hosts
+    - ssh -v -i ~/.ssh/id_rsa $AWS_USERNAME@$AWS_HOST "
+        cd /home/ubuntu && 
+        git config --global --add safe.directory /home/ubuntu/backend &&
+        if [ -d backend ]; then
+          echo "backend folder found....." && 
+          cd backend &&
+          if [ -d .git ]; then
+            git pull origin ${BRANCH_NAME};
+          else
+            echo ".Git not found we are removing existing folder and cloning project..." && 
+            cd .. &&
+            sudo rm -rf backend &&
+            git clone -b ${BRANCH_NAME} https://gitlab+deploy-token-56954978:${GITLAB_ACCESS_TOKEN}@gitlab.com/saikirandeekonda/cicd-demo.git backend &&
+            cd backend &&
+            git fetch &&
+            git checkout ${BRANCH_NAME} &&
+            git pull;
+          fi;
+        else
+          git clone -b ${BRANCH_NAME} https://gitlab+deploy-token-56954978:${GITLAB_ACCESS_TOKEN}@gitlab.com/saikirandeekonda/cicd-demo.git backend &&
+          cd backend &&
+          echo 'Cloned from git repo';
+        fi &&
+        npm install &&
+        if sudo pm2 status app.js | grep -q 'online'; then
+          sudo pm2 restart app.js;
+        else
+          sudo pm2 start app.js;
+        fi" 
+  tags:
+    - runner1
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
